@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   User,
@@ -20,6 +21,7 @@ import {
   ShieldCheck,
   Zap,
 } from "lucide-react";
+import { toast } from "react-toastify";
 
 interface Skill {
   name: string;
@@ -27,6 +29,8 @@ interface Skill {
 }
 
 export default function MyProfilePage() {
+  const { data: session } = useSession();
+
   const [skills, setSkills] = useState<Skill[]>([
     { name: "React.js", level: "Expert" },
     { name: "Next.js", level: "Expert" },
@@ -35,24 +39,33 @@ export default function MyProfilePage() {
     { name: "Node.js", level: "Intermediate" },
   ]);
 
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newSkillName, setNewSkillName] = useState("");
   const [newSkillLevel, setNewSkillLevel] = useState("Intermediate");
-
   const [isSaved, setIsSaved] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
-    fullName: "John Doe",
+    fullName: "",
     headline: "Senior Frontend Developer | React & Next.js Specialist",
-    email: "john.doe@example.com",
+    email: "",
     phone: "+880 1700-000000",
     location: "Dhaka, Bangladesh",
     website: "https://johndoe.dev",
-    bio: "Passionate Frontend Developer with 4+ years of experience in building modern, performant, and accessible web applications using React, Next.js, and TypeScript.",
+    bio: "Passionate Frontend Developer with 4+ years of experience in building modern web applications.",
   });
 
-  // Modal Submit Logic
+  // Session ba user data theke initial state set kora
+  useEffect(() => {
+    if (session?.user) {
+      setFormData((prev) => ({
+        ...prev,
+        fullName: session.user.name || "",
+        email: session.user.email || "",
+      }));
+    }
+  }, [session]);
+
   const handleAddSkillFromModal = (e: React.FormEvent) => {
     e.preventDefault();
     if (
@@ -67,7 +80,7 @@ export default function MyProfilePage() {
       ]);
       setNewSkillName("");
       setNewSkillLevel("Intermediate");
-      setIsModalOpen(false); // Close Modal
+      setIsModalOpen(false);
     }
   };
 
@@ -75,11 +88,33 @@ export default function MyProfilePage() {
     setSkills(skills.filter((s) => s.name !== skillName));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
+    setLoading(true);
+
+    try {
+      // Backend API call to update profile data
+      const res = await fetch("/api/user/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...formData, skills }),
+      });
+
+      if (res.ok) {
+        setIsSaved(true);
+        toast.success("Profile updated successfully!");
+        setTimeout(() => setIsSaved(false), 3000);
+      } else {
+        toast.error("Failed to update profile");
+      }
+    } catch (err) {
+      toast.error("Something went wrong!");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const userInitial = formData.fullName ? formData.fullName.charAt(0).toUpperCase() : "U";
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto pb-12">
@@ -103,10 +138,11 @@ export default function MyProfilePage() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleSubmit}
-            className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold px-6 py-3 rounded-2xl shadow-lg shadow-indigo-500/25 transition text-sm self-start md:self-auto"
+            disabled={loading}
+            className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold px-6 py-3 rounded-2xl shadow-lg shadow-indigo-500/25 transition text-sm self-start md:self-auto disabled:opacity-50"
           >
             {isSaved ? <CheckCircle2 size={18} /> : <Save size={18} />}
-            {isSaved ? "Saved Successfully!" : "Save Changes"}
+            {loading ? "Saving..." : isSaved ? "Saved Successfully!" : "Save Changes"}
           </motion.button>
         </div>
       </div>
@@ -118,9 +154,17 @@ export default function MyProfilePage() {
           {/* Avatar Card */}
           <div className="bg-slate-900/60 backdrop-blur-md border border-slate-800/80 rounded-3xl p-6 text-center relative overflow-hidden group">
             <div className="relative inline-block mx-auto mb-4">
-              <div className="w-28 h-28 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center font-black text-white text-4xl border-4 border-slate-900 shadow-2xl">
-                JD
-              </div>
+              {session?.user?.image ? (
+                <img
+                  src={session.user.image}
+                  alt={formData.fullName}
+                  className="w-28 h-28 rounded-2xl object-cover mx-auto border-4 border-slate-900 shadow-2xl"
+                />
+              ) : (
+                <div className="w-28 h-28 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center font-black text-white text-4xl border-4 border-slate-900 shadow-2xl">
+                  {userInitial}
+                </div>
+              )}
               <button
                 title="Change Avatar"
                 className="absolute -bottom-2 -right-2 p-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl border border-slate-700 shadow-lg transition"
@@ -131,7 +175,7 @@ export default function MyProfilePage() {
             <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-400 font-medium bg-emerald-500/10 border border-emerald-500/20 py-1 px-3 rounded-full w-fit mx-auto mb-2">
               <ShieldCheck size={14} /> Verified Candidate
             </div>
-            <h3 className="text-xl font-bold text-white">{formData.fullName}</h3>
+            <h3 className="text-xl font-bold text-white">{formData.fullName || "User"}</h3>
             <p className="text-xs text-indigo-400 font-medium mt-1">
               {formData.headline}
             </p>
@@ -158,9 +202,9 @@ export default function MyProfilePage() {
                 </div>
                 <div className="truncate">
                   <p className="text-xs font-semibold text-white truncate">
-                    John_Doe_Resume.pdf
+                    Resume_Document.pdf
                   </p>
-                  <p className="text-[10px] text-slate-500">2.4 MB • Updated Sep 2026</p>
+                  <p className="text-[10px] text-slate-500">Updated recently</p>
                 </div>
               </div>
               <button className="text-slate-400 hover:text-rose-400 transition p-1">
@@ -318,6 +362,7 @@ export default function MyProfilePage() {
                 <Zap size={18} className="text-indigo-400" /> Skills & Expertise
               </h4>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(true)}
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium text-xs transition flex items-center gap-1.5 shadow-md shadow-indigo-600/20"
               >
@@ -365,6 +410,7 @@ export default function MyProfilePage() {
                   <Zap size={18} className="text-indigo-400" /> Add New Skill
                 </h3>
                 <button
+                  type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
                 >

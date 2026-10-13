@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useSession, signOut } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -10,31 +11,21 @@ import {
   Search,
   Building2,
   PlusCircle,
-  User,
   LogOut,
   Bell,
   Menu,
   X,
-  FileText,
-  CheckCircle2,
-  ShieldCheck,
+  LayoutDashboard,
   ChevronDown,
 } from "lucide-react";
 
-type UserRole = "visitor" | "seeker" | "employer" | "admin";
-
-interface UserState {
-  isLoggedIn: boolean;
-  role: UserRole;
-  name: string;
-}
-
 export const Navbar: React.FC = () => {
-  const [user, setUser] = useState<UserState>({
-    isLoggedIn: false, // ডিফল্টভাবে Visitor রাখা হয়েছে যেন Login/Register বাটন দৃশ্যমান হয়
-    role: "visitor",
-    name: "",
-  });
+  const { data: session, status } = useSession();
+  const isLoggedIn = status === "authenticated";
+  
+  const userRole = (session?.user as any)?.role || "applicant";
+  const userName = session?.user?.name || "User";
+  const userImage = session?.user?.image;
 
   const [mobile, setMobile] = useState(false);
   const [profile, setProfile] = useState(false);
@@ -42,59 +33,11 @@ export const Navbar: React.FC = () => {
   const notify = (msg: string) =>
     toast.success(msg, { position: "bottom-right", autoClose: 2000 });
 
-  const logout = () => {
-    setUser({ isLoggedIn: false, role: "visitor", name: "" });
+  const handleLogout = () => {
     setProfile(false);
+    signOut({ callbackUrl: "/" });
     toast.info("আপনার অ্যাকাউন্ট থেকে লগআউট করা হয়েছে!");
   };
-
-  const profileLinks = () => {
-    if (user.role === "seeker")
-      return (
-        <>
-          <MenuItem icon={<FileText />} text="My Applications" />
-          <MenuItem icon={<Briefcase />} text="Saved Jobs" />
-        </>
-      );
-
-    if (user.role === "employer")
-      return (
-        <>
-          <MenuItem icon={<PlusCircle />} text="Post a Job" />
-          <MenuItem icon={<User />} text="Manage Applicants" />
-        </>
-      );
-
-    if (user.role === "admin")
-      return (
-        <>
-          <MenuItem icon={<ShieldCheck />} text="Admin Dashboard" />
-          <MenuItem icon={<CheckCircle2 />} text="Pending Approvals" />
-        </>
-      );
-
-    return null;
-  };
-
-  const MenuItem = ({
-    icon,
-    text,
-  }: {
-    icon: React.ReactNode;
-    text: string;
-  }) => (
-    <motion.a
-      href="#"
-      whileHover={{ x: 5 }}
-      onClick={() => notify(text)}
-      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 transition"
-    >
-      {React.isValidElement(icon)
-        ? React.cloneElement(icon as React.ReactElement<{ size?: number }>, { size: 17 })
-        : icon}
-      {text}
-    </motion.a>
-  );
 
   return (
     <>
@@ -131,30 +74,18 @@ export const Navbar: React.FC = () => {
 
             {/* Desktop Links */}
             <div className="hidden md:flex items-center gap-7">
-              <NavLink href="#jobs" icon={<Search size={18} />}>
+              <NavLink href="/#jobs" icon={<Search size={18} />}>
                 Find Jobs
               </NavLink>
 
-              <NavLink href="#companies" icon={<Building2 size={18} />}>
+              <NavLink href="/#companies" icon={<Building2 size={18} />}>
                 Companies
               </NavLink>
-
-              {user.role === "employer" && (
-                <motion.button
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => notify("Creating New Job Post...")}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 font-semibold hover:bg-indigo-600/20"
-                >
-                  <PlusCircle size={18} />
-                  Post a Job
-                </motion.button>
-              )}
             </div>
 
             {/* Desktop Actions */}
             <div className="hidden md:flex items-center gap-3">
-              {!user.isLoggedIn ? (
+              {!isLoggedIn ? (
                 <>
                   <Link href="/login">
                     <motion.button
@@ -181,25 +112,15 @@ export const Navbar: React.FC = () => {
                   <motion.button
                     whileHover={{ scale: 1.12 }}
                     whileTap={{ scale: 0.9 }}
-                    onClick={() => notify("There was no notification found!")}
+                    onClick={() => notify("No new notifications")}
                     className="relative p-2.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-900"
                   >
-                    <motion.div
-                      animate={{ rotate: [0, -8, 8, 0] }}
-                      transition={{
-                        duration: 0.7,
-                        repeat: Infinity,
-                        repeatDelay: 5,
-                      }}
-                    >
-                      <Bell size={20} />
-                    </motion.div>
-
+                    <Bell size={20} />
                     <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
                     <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
                   </motion.button>
 
-                  {/* Profile */}
+                  {/* Profile Dropdown */}
                   <div className="relative">
                     <motion.button
                       whileHover={{ scale: 1.04 }}
@@ -207,9 +128,17 @@ export const Navbar: React.FC = () => {
                       className="flex items-center gap-2 p-1.5 rounded-full border border-slate-800 hover:border-indigo-500 transition"
                     >
                       <div className="relative">
-                        <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">
-                          {user.name.charAt(0)}
-                        </div>
+                        {userImage ? (
+                          <img
+                            src={userImage}
+                            alt={userName}
+                            className="w-9 h-9 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold">
+                            {userName.charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-slate-950 rounded-full" />
                       </div>
 
@@ -224,20 +153,28 @@ export const Navbar: React.FC = () => {
                           initial={{ opacity: 0, y: 12, scale: 0.95 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 12, scale: 0.95 }}
-                          className="absolute right-0 mt-3 w-60 bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 overflow-hidden"
+                          className="absolute right-0 mt-3 w-60 bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 overflow-hidden z-50"
                         >
-                          <div className="p-4 bg-slate-950">
-                            <p className="font-bold text-white">{user.name}</p>
-                            <span className="text-xs text-indigo-400 capitalize">
-                              {user.role}
+                          <div className="p-4 bg-slate-950 border-b border-slate-800">
+                            <p className="font-bold text-white truncate">{userName}</p>
+                            <span className="text-xs text-indigo-400 capitalize bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20 inline-block mt-1">
+                              Role: {userRole}
                             </span>
                           </div>
 
-                          <div className="py-1">{profileLinks()}</div>
+                          {/* সুধু একটিমাত্র ড্যাশবোর্ড ও লগআউট অপশন */}
+                          <div className="py-1">
+                            <Link href="/dashboard" onClick={() => setProfile(false)}>
+                              <div className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-indigo-600/10 hover:text-indigo-400 transition cursor-pointer">
+                                <LayoutDashboard size={17} />
+                                Dashboard
+                              </div>
+                            </Link>
+                          </div>
 
                           <motion.button
                             whileHover={{ x: 5 }}
-                            onClick={logout}
+                            onClick={handleLogout}
                             className="w-full flex items-center gap-3 px-4 py-3 text-sm text-rose-500 hover:bg-rose-500/10 border-t border-slate-800"
                           >
                             <LogOut size={17} />
@@ -257,25 +194,7 @@ export const Navbar: React.FC = () => {
               onClick={() => setMobile(!mobile)}
               className="md:hidden p-2.5 rounded-xl hover:bg-slate-900 text-slate-300"
             >
-              <AnimatePresence mode="wait">
-                {mobile ? (
-                  <motion.div
-                    key="x"
-                    initial={{ rotate: -90, opacity: 0 }}
-                    animate={{ rotate: 0, opacity: 1 }}
-                  >
-                    <X size={25} />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="menu"
-                    initial={{ rotate: 90, opacity: 0 }}
-                    animate={{ rotate: 0, opacity: 1 }}
-                  >
-                    <Menu size={25} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {mobile ? <X size={25} /> : <Menu size={25} />}
             </motion.button>
           </div>
         </div>
@@ -290,31 +209,11 @@ export const Navbar: React.FC = () => {
               className="md:hidden border-t border-slate-900 bg-slate-950 px-4 py-4"
             >
               <div className="space-y-1">
-                <MobileLink
-                  icon={<Search />}
-                  text="Find Jobs"
-                  href="#jobs"
-                  close={() => setMobile(false)}
-                />
-
-                <MobileLink
-                  icon={<Building2 />}
-                  text="Companies"
-                  href="#companies"
-                  close={() => setMobile(false)}
-                />
-
-                {user.role === "employer" && (
-                  <MobileLink
-                    icon={<PlusCircle />}
-                    text="Post a Job"
-                    href="#post-job"
-                    close={() => setMobile(false)}
-                  />
-                )}
+                <MobileLink icon={<Search />} text="Find Jobs" href="/#jobs" close={() => setMobile(false)} />
+                <MobileLink icon={<Building2 />} text="Companies" href="/#companies" close={() => setMobile(false)} />
               </div>
 
-              {!user.isLoggedIn ? (
+              {!isLoggedIn ? (
                 <div className="flex gap-2 pt-4 mt-3 border-t border-slate-900">
                   <Link href="/login" className="flex-1" onClick={() => setMobile(false)}>
                     <button className="w-full border border-slate-800 text-slate-300 py-2.5 rounded-xl font-semibold hover:border-indigo-500 transition">
@@ -329,14 +228,20 @@ export const Navbar: React.FC = () => {
                   </Link>
                 </div>
               ) : (
-                <motion.button
-                  whileHover={{ x: 5 }}
-                  onClick={logout}
-                  className="mt-4 w-full flex items-center gap-3 px-3 py-3 text-rose-500 font-semibold border-t border-slate-900 pt-4"
-                >
-                  <LogOut size={18} />
-                  Logout
-                </motion.button>
+                <div className="mt-4 pt-3 border-t border-slate-900 space-y-2">
+                  <Link href="/dashboard" onClick={() => setMobile(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 font-medium hover:bg-slate-900 hover:text-indigo-400">
+                    <LayoutDashboard size={18} />
+                    Dashboard
+                  </Link>
+                  <motion.button
+                    whileHover={{ x: 5 }}
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-rose-500 font-semibold"
+                  >
+                    <LogOut size={18} />
+                    Logout
+                  </motion.button>
+                </div>
               )}
             </motion.div>
           )}
@@ -361,12 +266,8 @@ const NavLink = ({
     whileHover={{ y: -2 }}
     className="group relative flex items-center gap-2 text-slate-300 font-medium hover:text-white py-2"
   >
-    <motion.span whileHover={{ scale: 1.15, rotate: 5 }}>
-      {icon}
-    </motion.span>
-
+    <motion.span whileHover={{ scale: 1.15, rotate: 5 }}>{icon}</motion.span>
     {children}
-
     <span className="absolute bottom-0 left-0 h-0.5 w-0 bg-indigo-500 group-hover:w-full transition-all duration-300" />
   </motion.a>
 );
@@ -383,9 +284,8 @@ const MobileLink = ({
   href: string;
   close: () => void;
 }) => (
-  <motion.a
+  <Link
     href={href}
-    whileHover={{ x: 5 }}
     onClick={close}
     className="flex items-center gap-3 px-3 py-3 rounded-xl text-slate-300 font-medium hover:bg-slate-900 hover:text-indigo-400 transition"
   >
@@ -393,7 +293,7 @@ const MobileLink = ({
       ? React.cloneElement(icon as React.ReactElement<{ size?: number }>, { size: 19 })
       : icon}
     {text}
-  </motion.a>
+  </Link>
 );
 
 export default Navbar;

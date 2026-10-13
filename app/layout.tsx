@@ -27,9 +27,9 @@
 //     </html>
 //   );
 // }
-
 import './globals.css';
 import Navbar from './components/Navbar';
+import Providers from './providers'; // প্রোভাইডার ফাইলটি ইম্পোর্ট করা হলো
 
 export default function RootLayout({
   children,
@@ -39,8 +39,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-      <Navbar />
-        {children}
+        <Providers>
+          <Navbar />
+          {children}
+        </Providers>
       </body>
     </html>
   );

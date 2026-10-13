@@ -1,6 +1,6 @@
 
 "use client";
-
+import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -376,13 +376,15 @@ export const FeaturedJobs: React.FC = () => {
                         Easy Apply
                       </span>
 
-                      <motion.div
-                        whileHover={{ x: 3 }}
-                        className="flex items-center gap-1 text-sm font-semibold text-indigo-400 group-hover:text-indigo-300"
-                      >
-                        <span>Apply Now</span>
-                        <ArrowUpRight size={16} />
-                      </motion.div>
+                     <Link href={`/jobs/${job._id || job.id || "1"}/apply`}>
+  <motion.div
+    whileHover={{ x: 3 }}
+    className="flex items-center gap-1 text-sm font-semibold text-indigo-400 group-hover:text-indigo-300 cursor-pointer"
+  >
+    <span>Apply Now</span>
+    <ArrowUpRight size={16} />
+  </motion.div>
+</Link>
                     </div>
                   </motion.div>
                 );
