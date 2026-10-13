@@ -1,0 +1,77 @@
+// import dns from "dns";
+
+// // Force Node.js to use Google & Cloudflare Public DNS for resolving MongoDB SRV
+// dns.setServers(["8.8.8.8", "1.1.1.1"]);
+
+// import { NextResponse } from "next/server";
+// import clientPromise from "@/lib/dbConnect";
+
+// export async function POST(req: Request) {
+//   try {
+//     const body = await req.json();
+//     const client = await clientPromise;
+//     const db = client.db("jobportal"); // ডাটাবেজ নাম
+
+//     const result = await db.collection("jobs").insertOne({
+//       ...body,
+//       createdAt: new Date(),
+//     });
+
+//     return NextResponse.json({ success: true, data: result }, { status: 201 });
+//   } catch (error: any) {
+//     // VS Code টার্মিনালে আসল এরর প্রিন্ট হবে
+//     console.error("MongoDB Connection Error Detail:", error.message || error);
+//     return NextResponse.json(
+//       { error: error.message || "Failed to post job" },
+//       { status: 500 }
+//     );
+//   }
+// }
+
+// app/api/jobs/route.ts
+import { NextResponse } from "next/server";
+import clientPromise from "@/lib/dbConnect";
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const client = await clientPromise;
+    const db = client.db("jobportal");
+
+    const result = await db.collection("jobs").insertOne({
+      ...body,
+      createdAt: new Date(),
+    });
+
+    return NextResponse.json({ success: true, data: result }, { status: 201 });
+  } catch (error: any) {
+    console.error("MongoDB Connection Error Detail:", error.message || error);
+    return NextResponse.json(
+      { error: error.message || "Failed to post job" },
+      { status: 500 }
+    );
+  }
+}
+
+// নতুন যোগ করা হলো — job list fetch করার জন্য
+export async function GET() {
+  try {
+    const client = await clientPromise;
+    const db = client.db("jobportal");
+
+    const jobs = await db
+      .collection("jobs")
+      .find({})
+      .sort({ createdAt: -1 }) // নতুন জব আগে দেখাবে
+      .limit(50)
+      .toArray();
+
+    return NextResponse.json({ success: true, jobs }, { status: 200 });
+  } catch (error: any) {
+    console.error("MongoDB Fetch Error:", error.message || error);
+    return NextResponse.json(
+      { error: error.message || "Failed to fetch jobs" },
+      { status: 500 }
+    );
+  }
+}
