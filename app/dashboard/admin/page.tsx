@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Users,
   Briefcase,
@@ -9,60 +9,104 @@ import {
   XCircle,
   Clock,
   ShieldCheck,
-  TrendingUp,
-  Search,
 } from "lucide-react";
+import { toast } from "react-toastify";
 
 interface PendingJob {
-  id: string;
+  _id: string;
   title: string;
-  company: string;
-  location: string;
-  salary: string;
-  type: string;
-  postedDate: string;
+  company?: string;
+  location?: string;
+  salary?: string;
+  jobType?: string;
+  createdAt?: string;
 }
 
 export default function AdminDashboardPage() {
-  // Stats Data
-  const stats = [
-    { title: "Total Users", value: "1,420", icon: Users, color: "text-indigo-400", bg: "bg-indigo-500/10" },
-    { title: "Active Employers", value: "180", icon: Building2, color: "text-emerald-400", bg: "bg-emerald-500/10" },
-    { title: "Total Jobs Posted", value: "850", icon: Briefcase, color: "text-amber-400", bg: "bg-amber-500/10" },
-    { title: "Pending Approvals", value: "5", icon: Clock, color: "text-rose-400", bg: "bg-rose-500/10" },
+  const [stats, setStats] = useState({
+    totalUsers: "0",
+    activeEmployers: "0",
+    totalJobs: "0",
+    pendingApprovals: "0",
+  });
+  const [pendingJobs, setPendingJobs] = useState<PendingJob[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // অ্যাডমিন ড্যাশবোর্ড ডাটা ফেচ করা (API থেকে)
+  const fetchAdminData = async () => {
+    try {
+      const res = await fetch("/api/admin/dashboard");
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        setStats(data.stats || stats);
+        setPendingJobs(data.pendingJobs || []);
+      } else {
+        toast.error("Failed to load admin stats");
+      }
+    } catch (err) {
+      console.error("Admin data fetch error:", err);
+      toast.error("Something went wrong!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAdminData();
+  }, []);
+
+  // Handle Approve Job
+  const handleApprove = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/jobs/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve" }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success("Job approved successfully!");
+        // লিস্ট থেকে রিমুভ করা এবং পেন্ডিং কাউন্ট আপডেট করা
+        setPendingJobs((prev) => prev.filter((job) => job._id !== id));
+      } else {
+        toast.error(data.error || "Failed to approve job");
+      }
+    } catch (err) {
+      console.error("Approve error:", err);
+      toast.error("Something went wrong!");
+    }
+  };
+
+  // Handle Reject Job
+  const handleReject = async (id: string) => {
+    if (confirm("Are you sure you want to reject and remove this job?")) {
+      try {
+        const res = await fetch(`/api/admin/jobs/${id}`, {
+          method: "DELETE",
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          toast.success("Job rejected and removed!");
+          setPendingJobs((prev) => prev.filter((job) => job._id !== id));
+        } else {
+          toast.error(data.error || "Failed to reject job");
+        }
+      } catch (err) {
+        console.error("Reject error:", err);
+        toast.error("Something went wrong!");
+      }
+    }
+  };
+
+  const statCards = [
+    { title: "Total Users", value: stats.totalUsers, icon: Users, color: "text-indigo-400", bg: "bg-indigo-500/10" },
+    { title: "Active Employers", value: stats.activeEmployers, icon: Building2, color: "text-emerald-400", bg: "bg-emerald-500/10" },
+    { title: "Total Jobs Posted", value: stats.totalJobs, icon: Briefcase, color: "text-amber-400", bg: "bg-amber-500/10" },
+    { title: "Pending Approvals", value: pendingJobs.length.toString(), icon: Clock, color: "text-rose-400", bg: "bg-rose-500/10" },
   ];
-
-  // Pending Jobs State for Approval Moderation
-  const [pendingJobs, setPendingJobs] = useState<PendingJob[]>([
-    {
-      id: "101",
-      title: "Senior Full-Stack Developer",
-      company: "Nexus Tech Ltd.",
-      location: "Dhaka (Hybrid)",
-      salary: "$120k - $140k",
-      type: "Full-Time",
-      postedDate: "Sep 14, 2026",
-    },
-    {
-      id: "102",
-      title: "Lead UI/UX Designer",
-      company: "Creative Mind Studio",
-      location: "Remote",
-      salary: "$90k - $110k",
-      type: "Remote",
-      postedDate: "Sep 13, 2026",
-    },
-  ]);
-
-  // Handle Approve
-  const handleApprove = (id: string) => {
-    setPendingJobs((prev) => prev.filter((job) => job.id !== id));
-  };
-
-  // Handle Reject
-  const handleReject = (id: string) => {
-    setPendingJobs((prev) => prev.filter((job) => job.id !== id));
-  };
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto pb-12">
@@ -78,7 +122,7 @@ export default function AdminDashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, i) => (
+        {statCards.map((stat, i) => (
           <div key={i} className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 flex items-center justify-between">
             <div>
               <p className="text-xs text-slate-400 font-medium">{stat.title}</p>
@@ -107,39 +151,52 @@ export default function AdminDashboardPage() {
 
         {/* Pending Jobs List */}
         <div className="space-y-3 pt-2">
-          {pendingJobs.length > 0 ? (
-            pendingJobs.map((job) => (
-              <div
-                key={job.id}
-                className="bg-slate-950/60 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-700 transition"
-              >
-                <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-white">{job.title}</h4>
-                  <p className="text-xs text-slate-400 flex flex-wrap items-center gap-2">
-                    <span className="text-indigo-400 font-medium">{job.company}</span> • 
-                    <span>{job.location}</span> • 
-                    <span className="text-emerald-400">{job.salary}</span> • 
-                    <span>{job.type}</span>
-                  </p>
-                </div>
+          {loading ? (
+            <div className="text-center py-8 text-slate-400 text-xs">Loading pending approvals...</div>
+          ) : pendingJobs.length > 0 ? (
+            pendingJobs.map((job) => {
+              const dateStr = job.createdAt
+                ? new Date(job.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                : "Recently";
 
-                {/* Approve / Reject Actions */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleApprove(job.id)}
-                    className="px-3.5 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold rounded-xl border border-emerald-500/20 transition flex items-center gap-1"
-                  >
-                    <CheckCircle2 size={14} /> Approve
-                  </button>
-                  <button
-                    onClick={() => handleReject(job.id)}
-                    className="px-3.5 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-semibold rounded-xl border border-rose-500/20 transition flex items-center gap-1"
-                  >
-                    <XCircle size={14} /> Reject
-                  </button>
+              return (
+                <div
+                  key={job._id}
+                  className="bg-slate-950/60 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-700 transition"
+                >
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-white">{job.title}</h4>
+                    <p className="text-xs text-slate-400 flex flex-wrap items-center gap-2">
+                      <span className="text-indigo-400 font-medium">{job.company || "Company"}</span>
+                      <span>•</span>
+                      <span>{job.location || "Remote"}</span>
+                      <span>•</span>
+                      <span className="text-emerald-400">{job.salary || "Negotiable"}</span>
+                      <span>•</span>
+                      <span>{job.jobType || "Full-Time"}</span>
+                      <span>•</span>
+                      <span className="text-slate-500">{dateStr}</span>
+                    </p>
+                  </div>
+
+                  {/* Approve / Reject Actions */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleApprove(job._id)}
+                      className="px-3.5 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-semibold rounded-xl border border-emerald-500/20 transition flex items-center gap-1"
+                    >
+                      <CheckCircle2 size={14} /> Approve
+                    </button>
+                    <button
+                      onClick={() => handleReject(job._id)}
+                      className="px-3.5 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-semibold rounded-xl border border-rose-500/20 transition flex items-center gap-1"
+                    >
+                      <XCircle size={14} /> Reject
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="text-center py-8 bg-slate-950/40 rounded-2xl border border-slate-800/50">
               <p className="text-xs text-slate-400">All pending jobs have been reviewed.</p>

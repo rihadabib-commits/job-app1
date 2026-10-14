@@ -1,4 +1,3 @@
-
 "use client";
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
@@ -36,7 +35,7 @@ interface Job {
   createdAt?: string;
 }
 
-// category অনুযায়ী ডায়নামিক আইকন, গ্র্যাডিয়েন্ট ও গ্লো স্টাইল
+// category অনুযায়ী ডায়নামিক আইকন, গ্র্যাডিয়েন্ট ও গ্লো স্টাইল
 const CATEGORY_STYLES: Record<
   string,
   { icon: React.ReactNode; gradient: string; glow: string }
@@ -156,14 +155,45 @@ export const FeaturedJobs: React.FC = () => {
       ? jobs
       : jobs.filter((job) => job.category === activeTab);
 
-  const toggleSaveJob = (id: string, e: React.MouseEvent) => {
+  // ডাটাবেজে জব সেভ বা রিমুভ করার ডাইনামিক ফাংশন
+  const toggleSaveJob = async (job: Job, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (savedJobs.includes(id)) {
-      setSavedJobs(savedJobs.filter((item) => item !== id));
-      toast.info("Removed from saved jobs");
-    } else {
-      setSavedJobs([...savedJobs, id]);
-      toast.success("Job saved successfully!");
+    const isSaved = savedJobs.includes(job._id);
+
+    try {
+      if (isSaved) {
+        const res = await fetch(`/api/saved-jobs/${job._id}`, {
+          method: "DELETE",
+        });
+        if (res.ok) {
+          setSavedJobs(savedJobs.filter((id) => id !== job._id));
+          toast.info("Removed from saved jobs");
+        }
+      } else {
+        const res = await fetch("/api/saved-jobs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jobId: job._id,
+            title: job.title,
+            company: job.company,
+            location: job.location,
+            salary: job.salary,
+            jobType: job.type,
+          }),
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setSavedJobs([...savedJobs, job._id]);
+          toast.success("Job saved successfully!");
+        } else {
+          toast.error(data.error || "Failed to save job");
+        }
+      }
+    } catch (err) {
+      console.error("Save job error:", err);
+      toast.error("Something went wrong!");
     }
   };
 
@@ -189,7 +219,7 @@ export const FeaturedJobs: React.FC = () => {
                 </span>
               </span>
 
-              {/* ডায়নামিক কাউন্টার ব্যাজ */}
+              {/* ডায়নামিক কাউন্টার ব্যাজ */}
               <span className="text-xs sm:text-sm font-semibold text-slate-300 bg-slate-900 border border-slate-800 px-3.5 py-1.5 rounded-full">
                 {loading
                   ? "..."
@@ -205,7 +235,7 @@ export const FeaturedJobs: React.FC = () => {
             <div className="flex flex-wrap gap-2 mt-6 md:mt-0 bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800">
               {categories.map((tab) => (
                 <button
-                  key={tab}
+                  key={tab as string}
                   onClick={() => setActiveTab(tab as string)}
                   className={`relative px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors duration-300 ${
                     activeTab === tab
@@ -331,7 +361,7 @@ export const FeaturedJobs: React.FC = () => {
                         <motion.button
                           whileHover={{ scale: 1.15 }}
                           whileTap={{ scale: 0.85 }}
-                          onClick={(e) => toggleSaveJob(job._id, e)}
+                          onClick={(e) => toggleSaveJob(job, e)}
                           className={`p-2.5 rounded-full border transition-all ${
                             isSaved
                               ? "bg-indigo-600/20 border-indigo-500 text-indigo-400"
@@ -376,15 +406,15 @@ export const FeaturedJobs: React.FC = () => {
                         Easy Apply
                       </span>
 
-                     <Link href={`/jobs/${job._id || job.id || "1"}/apply`}>
-  <motion.div
-    whileHover={{ x: 3 }}
-    className="flex items-center gap-1 text-sm font-semibold text-indigo-400 group-hover:text-indigo-300 cursor-pointer"
-  >
-    <span>Apply Now</span>
-    <ArrowUpRight size={16} />
-  </motion.div>
-</Link>
+                      <Link href={`/jobs/${job._id || job.id || "1"}/apply`}>
+                        <motion.div
+                          whileHover={{ x: 3 }}
+                          className="flex items-center gap-1 text-sm font-semibold text-indigo-400 group-hover:text-indigo-300 cursor-pointer"
+                        >
+                          <span>Apply Now</span>
+                          <ArrowUpRight size={16} />
+                        </motion.div>
+                      </Link>
                     </div>
                   </motion.div>
                 );

@@ -10,7 +10,6 @@ import {
   Briefcase,
   Search,
   Building2,
-  PlusCircle,
   LogOut,
   Bell,
   Menu,
@@ -22,7 +21,7 @@ import {
 export const Navbar: React.FC = () => {
   const { data: session, status } = useSession();
   const isLoggedIn = status === "authenticated";
-  
+
   const userRole = (session?.user as any)?.role || "applicant";
   const userName = session?.user?.name || "User";
   const userImage = session?.user?.image;
@@ -51,7 +50,6 @@ export const Navbar: React.FC = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="h-[70px] flex items-center justify-between">
-
             {/* Professional Logo */}
             <Link href="/" className="flex items-center gap-3 group">
               <motion.div
@@ -74,11 +72,11 @@ export const Navbar: React.FC = () => {
 
             {/* Desktop Links */}
             <div className="hidden md:flex items-center gap-7">
-              <NavLink href="/#jobs" icon={<Search size={18} />}>
+              <NavLink href="/job" icon={<Search size={18} />}>
                 Find Jobs
               </NavLink>
 
-              <NavLink href="/#companies" icon={<Building2 size={18} />}>
+              <NavLink href="/companies" icon={<Building2 size={18} />}>
                 Companies
               </NavLink>
             </div>
@@ -162,7 +160,6 @@ export const Navbar: React.FC = () => {
                             </span>
                           </div>
 
-                          {/* সুধু একটিমাত্র ড্যাশবোর্ড ও লগআউট অপশন */}
                           <div className="py-1">
                             <Link href="/dashboard" onClick={() => setProfile(false)}>
                               <div className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:bg-indigo-600/10 hover:text-indigo-400 transition cursor-pointer">
@@ -209,8 +206,8 @@ export const Navbar: React.FC = () => {
               className="md:hidden border-t border-slate-900 bg-slate-950 px-4 py-4"
             >
               <div className="space-y-1">
-                <MobileLink icon={<Search />} text="Find Jobs" href="/#jobs" close={() => setMobile(false)} />
-                <MobileLink icon={<Building2 />} text="Companies" href="/#companies" close={() => setMobile(false)} />
+                <MobileLink icon={<Search />} text="Find Jobs" href="/job" close={() => setMobile(false)} />
+                <MobileLink icon={<Building2 />} text="Companies" href="/companies" close={() => setMobile(false)} />
               </div>
 
               {!isLoggedIn ? (
@@ -261,15 +258,14 @@ const NavLink = ({
   icon: React.ReactNode;
   children: React.ReactNode;
 }) => (
-  <motion.a
+  <Link
     href={href}
-    whileHover={{ y: -2 }}
-    className="group relative flex items-center gap-2 text-slate-300 font-medium hover:text-white py-2"
+    className="group relative flex items-center gap-2 text-slate-300 font-medium hover:text-white py-2 cursor-pointer"
   >
     <motion.span whileHover={{ scale: 1.15, rotate: 5 }}>{icon}</motion.span>
     {children}
     <span className="absolute bottom-0 left-0 h-0.5 w-0 bg-indigo-500 group-hover:w-full transition-all duration-300" />
-  </motion.a>
+  </Link>
 );
 
 /* Mobile Link */

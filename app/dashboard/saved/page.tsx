@@ -1,61 +1,77 @@
 "use client";
 
-import React, { useState } from "react";
-import { Search, Building2, MapPin, DollarSign, BookmarkCheck, ExternalLink, Trash2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Search, Building2, MapPin, DollarSign, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 
-interface SavedJob {
-  id: string;
+interface SavedJobItem {
+  _id: string;
+  jobId: string;
   title: string;
-  company: string;
-  location: string;
-  salary: string;
-  type: string;
-  postedDate: string;
+  company?: string;
+  location?: string;
+  salary?: string;
+  jobType?: string;
+  createdAt?: string;
 }
 
 export default function SavedJobsPage() {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
+  const [savedJobs, setSavedJobs] = useState<SavedJobItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Sample Saved Jobs Data
-  const [savedJobs, setSavedJobs] = useState<SavedJob[]>([
-    {
-      id: "1",
-      title: "Full Stack Developer",
-      company: "TechSys Global",
-      location: "Dhaka, Bangladesh (Hybrid)",
-      salary: "$1,200 - $1,800 / month",
-      type: "Full-time",
-      postedDate: "2 days ago",
-    },
-    {
-      id: "2",
-      title: "Senior Product Designer",
-      company: "InnoLabs",
-      location: "Remote",
-      salary: "$2,500 - $3,500 / month",
-      type: "Contract",
-      postedDate: "5 days ago",
-    },
-    {
-      id: "3",
-      title: "DevOps Engineer",
-      company: "CloudScale Inc.",
-      location: "Remote",
-      salary: "$2,000 - $3,000 / month",
-      type: "Full-time",
-      postedDate: "1 week ago",
-    },
-  ]);
-
-  const handleRemoveSaved = (id: string) => {
-    setSavedJobs(savedJobs.filter((job) => job.id !== id));
+  // ডাটাবেজ থেকে সেভ করা জবগুলো ফেচ করা
+  const fetchSavedJobs = async () => {
+    try {
+      const res = await fetch("/api/saved-jobs");
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSavedJobs(data.data || []);
+      } else {
+        toast.error("Failed to load saved jobs");
+      }
+    } catch (err) {
+      console.error("Fetch saved jobs error:", err);
+      toast.error("Something went wrong!");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const filteredJobs = savedJobs.filter(
-    (job) =>
-      job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.company.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    fetchSavedJobs();
+  }, []);
+
+  // সেভ করা জব রিমুভ করা
+  const handleRemoveSaved = async (id: string) => {
+    try {
+      const res = await fetch(`/api/saved-jobs/${id}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success("Job removed from saved list");
+        setSavedJobs((prev) => prev.filter((job) => job._id !== id));
+      } else {
+        toast.error(data.error || "Failed to remove job");
+      }
+    } catch (err) {
+      console.error("Remove error:", err);
+      toast.error("Something went wrong!");
+    }
+  };
+
+  const filteredJobs = savedJobs.filter((job) => {
+    const title = job.title || "";
+    const company = job.company || "";
+    return (
+      title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      company.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
   return (
     <div className="space-y-6">
@@ -85,64 +101,68 @@ export default function SavedJobsPage() {
       </div>
 
       {/* Jobs Grid */}
-      {filteredJobs.length > 0 ? (
+      {loading ? (
+        <div className="text-center py-16 text-slate-400 text-sm">Loading saved jobs...</div>
+      ) : filteredJobs.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredJobs.map((job) => (
-            <div
-              key={job.id}
-              className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-lg font-semibold text-white">{job.title}</h3>
-                    <p className="text-xs text-indigo-400 flex items-center gap-1.5 mt-1 font-medium">
-                      <Building2 size={14} /> {job.company}
-                    </p>
+          {filteredJobs.map((job) => {
+            const dateStr = job.createdAt
+              ? new Date(job.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+              : "Recently";
+
+            return (
+              <div
+                key={job._id}
+                className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">{job.title}</h3>
+                      <p className="text-xs text-indigo-400 flex items-center gap-1.5 mt-1 font-medium">
+                        <Building2 size={14} /> {job.company || "Company"}
+                      </p>
+                    </div>
                   </div>
+
+                  <div className="mt-4 space-y-2 text-xs text-slate-300">
+                    <div className="flex items-center gap-2">
+                      <MapPin size={14} className="text-slate-500" />
+                      <span>{job.location || "Remote"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <DollarSign size={14} className="text-slate-500" />
+                      <span>{job.salary || "Negotiable"}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 mt-4">
+                    <span className="text-[11px] px-2.5 py-1 bg-slate-800 border border-slate-700/50 rounded-lg text-slate-300">
+                      {job.jobType || "Full-time"}
+                    </span>
+                    <span className="text-[11px] text-slate-500">Saved on {dateStr}</span>
+                  </div>
+                </div>
+
+                {/* Actions: Apply Now & Remove */}
+                <div className="flex items-center gap-3 mt-6 pt-4 border-t border-slate-800/80">
                   <button
-                    onClick={() => handleRemoveSaved(job.id)}
-                    title="Remove from saved"
-                    className="text-slate-500 hover:text-rose-400 p-1.5 hover:bg-slate-800 rounded-lg transition"
+                    onClick={() => router.push(`/jobs/${job.jobId || job._id}/apply`)}
+                    className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs rounded-xl transition text-center"
                   >
-                    <BookmarkCheck size={20} className="text-indigo-500 hover:text-rose-400" />
+                    Apply Now
+                  </button>
+                  <button
+                    onClick={() => handleRemoveSaved(job._id)}
+                    className="p-2 text-slate-400 hover:text-rose-400 bg-slate-800/50 hover:bg-slate-800 rounded-xl transition"
+                    title="Remove from saved"
+                  >
+                    <Trash2 size={16} />
                   </button>
                 </div>
-
-                <div className="mt-4 space-y-2 text-xs text-slate-300">
-                  <div className="flex items-center gap-2">
-                    <MapPin size={14} className="text-slate-500" />
-                    <span>{job.location}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <DollarSign size={14} className="text-slate-500" />
-                    <span>{job.salary}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 mt-4">
-                  <span className="text-[11px] px-2.5 py-1 bg-slate-800 border border-slate-700/50 rounded-lg text-slate-300">
-                    {job.type}
-                  </span>
-                  <span className="text-[11px] text-slate-500">Posted {job.postedDate}</span>
-                </div>
               </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-3 mt-6 pt-4 border-t border-slate-800/80">
-                <button className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs rounded-xl transition">
-                  Apply Now
-                </button>
-                <button
-                  onClick={() => handleRemoveSaved(job.id)}
-                  className="p-2 text-slate-400 hover:text-rose-400 bg-slate-800/50 hover:bg-slate-800 rounded-xl transition"
-                  title="Remove"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl text-center py-16 text-slate-500">
