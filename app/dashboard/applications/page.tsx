@@ -1,66 +1,41 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Search, Filter, ExternalLink, Trash2, Building, Calendar, Tag } from "lucide-react";
-
-interface Application {
-  id: string;
-  jobTitle: string;
-  company: string;
-  location: string;
-  type: string;
-  appliedDate: string;
-  status: "Pending" | "In Review" | "Interview" | "Rejected";
-}
+import { toast } from "react-toastify";
 
 export default function MyApplicationsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Sample data (Backend API থেকে এই ডেটা ফ্লেচ হবে)
-  const [applications, setApplications] = useState<Application[]>([
-    {
-      id: "1",
-      jobTitle: "Senior Frontend Developer",
-      company: "TechCorp Solutions",
-      location: "Dhaka, Bangladesh",
-      type: "Full-time",
-      appliedDate: "Sep 12, 2026",
-      status: "Interview",
-    },
-    {
-      id: "2",
-      jobTitle: "UI/UX Designer",
-      company: "Creative Studio",
-      location: "Remote",
-      type: "Contract",
-      appliedDate: "Sep 10, 2026",
-      status: "In Review",
-    },
-    {
-      id: "3",
-      jobTitle: "Full Stack Engineer",
-      company: "DataSoft Ltd",
-      location: "Hybrid",
-      type: "Full-time",
-      appliedDate: "Sep 05, 2026",
-      status: "Pending",
-    },
-    {
-      id: "4",
-      jobTitle: "React Native Developer",
-      company: "Appify Agency",
-      location: "Remote",
-      type: "Part-time",
-      appliedDate: "Aug 28, 2026",
-      status: "Rejected",
-    },
-  ]);
+  // ব্যাকএন্ড API থেকে অ্যাপ্লিকেশন ডেটা ফেচ করা
+  const fetchApplications = async () => {
+    try {
+      const res = await fetch("/api/applications");
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setApplications(data.data || []);
+      } else {
+        toast.error("Failed to load applications");
+      }
+    } catch (err) {
+      console.error("Fetch error:", err);
+      toast.error("Something went wrong!");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Status Styling Badge
-  const getStatusBadge = (status: Application["status"]) => {
+  useEffect(() => {
+    fetchApplications();
+  }, []);
+
+  // Status Styling Badge (Shortlisted, In Review, Rejected ইত্যাদি হ্যান্ডেল করা)
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case "Interview":
+      case "Shortlisted":
         return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
       case "In Review":
         return "bg-amber-500/10 text-amber-400 border-amber-500/20";
@@ -69,22 +44,44 @@ export default function MyApplicationsPage() {
       case "Rejected":
         return "bg-rose-500/10 text-rose-400 border-rose-500/20";
       default:
-        return "bg-slate-800 text-slate-300";
+        return "bg-slate-800 text-slate-300 border-slate-700";
     }
   };
 
   // Filter Logic
   const filteredApplications = applications.filter((app) => {
+    const jobTitle = app.jobDetails?.title || app.jobTitle || "";
+    const company = app.jobDetails?.company || app.company || "";
+    const status = app.status || "In Review";
+
     const matchesSearch =
-      app.jobTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.company.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "All" || app.status === statusFilter;
+      jobTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      company.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === "All" || status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const handleWithdraw = (id: string) => {
+  // Application Delete / Withdraw Handle
+  const handleWithdraw = async (id: string) => {
     if (confirm("Are you sure you want to withdraw this application?")) {
-      setApplications(applications.filter((app) => app.id !== id));
+      try {
+        const res = await fetch(`/api/applications/${id}`, {
+          method: "DELETE",
+        });
+
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          toast.success("Application withdrawn successfully");
+          setApplications(applications.filter((app) => app._id !== id));
+        } else {
+          toast.error(data.error || "Failed to withdraw application");
+        }
+      } catch (err) {
+        console.error("Delete error:", err);
+        toast.error("Something went wrong!");
+      }
     }
   };
 
@@ -118,7 +115,7 @@ export default function MyApplicationsPage() {
 
         <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
           <Filter size={16} className="text-slate-400 ml-1 hidden sm:block" />
-          {["All", "Pending", "In Review", "Interview", "Rejected"].map((status) => (
+          {["All", "Pending", "In Review", "Shortlisted", "Rejected"].map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
@@ -136,7 +133,9 @@ export default function MyApplicationsPage() {
 
       {/* Applications Table / Card List */}
       <div className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden">
-        {filteredApplications.length > 0 ? (
+        {loading ? (
+          <div className="text-center py-16 text-slate-400 text-sm">Loading your applications...</div>
+        ) : filteredApplications.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -149,53 +148,63 @@ export default function MyApplicationsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-sm">
-                {filteredApplications.map((app) => (
-                  <tr key={app.id} className="hover:bg-slate-800/30 transition">
-                    <td className="py-4 px-6">
-                      <div className="font-semibold text-white text-base">{app.jobTitle}</div>
-                      <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
-                        <Building size={14} /> {app.company}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="text-slate-300 text-xs font-medium">{app.location}</div>
-                      <div className="flex items-center gap-1 text-[11px] text-indigo-400 mt-0.5">
-                        <Tag size={12} /> {app.type}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6 text-slate-400 text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <Calendar size={14} /> {app.appliedDate}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span
-                        className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(
-                          app.status
-                        )}`}
-                      >
-                        {app.status}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          title="View Details"
-                          className="p-2 text-slate-400 hover:text-indigo-400 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition"
+                {filteredApplications.map((app) => {
+                  const jobTitle = app.jobDetails?.title || app.jobTitle || "Job Position";
+                  const company = app.jobDetails?.company || app.company || "Company Name";
+                  const location = app.jobDetails?.location || "Remote / Bangladesh";
+                  const jobType = app.jobDetails?.jobType || "Full-time";
+                  const currentStatus = app.status || "In Review";
+                  
+                  const dateStr = app.createdAt
+                    ? new Date(app.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })
+                    : "Recently";
+
+                  return (
+                    <tr key={app._id} className="hover:bg-slate-800/30 transition">
+                      <td className="py-4 px-6">
+                        <div className="font-semibold text-white text-base">{jobTitle}</div>
+                        <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
+                          <Building size={14} /> {company}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="text-slate-300 text-xs font-medium">{location}</div>
+                        <div className="flex items-center gap-1 text-[11px] text-indigo-400 mt-0.5">
+                          <Tag size={12} /> {jobType}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 text-slate-400 text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar size={14} /> {dateStr}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(
+                            currentStatus
+                          )}`}
                         >
-                          <ExternalLink size={16} />
-                        </button>
-                        <button
-                          title="Withdraw Application"
-                          onClick={() => handleWithdraw(app.id)}
-                          className="p-2 text-slate-400 hover:text-rose-400 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          {currentStatus}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            title="Withdraw Application"
+                            onClick={() => handleWithdraw(app._id)}
+                            className="p-2 text-slate-400 hover:text-rose-400 bg-slate-800/50 hover:bg-slate-800 rounded-lg transition"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

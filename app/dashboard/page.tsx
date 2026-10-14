@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Briefcase, CheckCircle2, Clock, Bookmark } from "lucide-react";
+import { Briefcase, CheckCircle2, Clock, Bookmark, XCircle } from "lucide-react";
 
 export default function OverviewPage() {
   const { data: session } = useSession();
@@ -30,6 +30,9 @@ export default function OverviewPage() {
   }, []);
 
   const totalApplied = applications.length;
+  // ডাইনামিক্যালি শর্টলিস্ট এবং ইন রিভিউ কাউন্ট করা
+  const totalShortlisted = applications.filter((app) => app.status === "Shortlisted").length;
+  const totalInReview = applications.filter((app) => !app.status || app.status === "In Review").length;
 
   return (
     <div className="space-y-8">
@@ -50,13 +53,13 @@ export default function OverviewPage() {
         />
         <StatCard
           icon={<CheckCircle2 className="text-emerald-400" size={22} />}
-          title="Interviews"
-          value="0"
+          title="Shortlisted"
+          value={totalShortlisted.toString()}
         />
         <StatCard
           icon={<Clock className="text-amber-400" size={22} />}
           title="In Review"
-          value={totalApplied.toString()}
+          value={totalInReview.toString()}
         />
         <StatCard
           icon={<Bookmark className="text-blue-400" size={22} />}
@@ -95,15 +98,15 @@ export default function OverviewPage() {
                       })
                     : "Recently";
 
+                  const currentStatus = app.status || "In Review";
+
                   return (
                     <tr key={app._id || index} className="hover:bg-slate-800/30 transition">
                       <td className="py-4 px-4 font-semibold text-white">{jobTitle}</td>
                       <td className="py-4 px-4 text-slate-300">{companyName}</td>
                       <td className="py-4 px-4 text-slate-400 text-xs">{dateStr}</td>
                       <td className="py-4 px-4">
-                        <span className="px-3 py-1 rounded-full text-xs font-medium border bg-amber-500/10 text-amber-400 border-amber-500/20">
-                          In Review
-                        </span>
+                        <DynamicStatusBadge status={currentStatus} />
                       </td>
                     </tr>
                   );
@@ -134,3 +137,27 @@ const StatCard = ({
     </div>
   </div>
 );
+
+// ডাইনামিক স্ট্যাটাস ব্যাজ কম্পোনেন্ট
+const DynamicStatusBadge = ({ status }: { status: string }) => {
+  switch (status) {
+    case "Shortlisted":
+      return (
+        <span className="px-3 py-1 rounded-full text-xs font-medium border bg-emerald-500/10 text-emerald-400 border-emerald-500/20 flex items-center gap-1 w-max">
+          <CheckCircle2 size={12} /> Shortlisted
+        </span>
+      );
+    case "Rejected":
+      return (
+        <span className="px-3 py-1 rounded-full text-xs font-medium border bg-rose-500/10 text-rose-400 border-rose-500/20 flex items-center gap-1 w-max">
+          <XCircle size={12} /> Rejected
+        </span>
+      );
+    default:
+      return (
+        <span className="px-3 py-1 rounded-full text-xs font-medium border bg-amber-500/10 text-amber-400 border-amber-500/20 flex items-center gap-1 w-max">
+          <Clock size={12} /> In Review
+        </span>
+      );
+  }
+};
