@@ -88,7 +88,7 @@ export const Navbar: React.FC = () => {
                   <Link href="/login">
                     <motion.button
                       whileHover={{ scale: 1.05 }}
-                      className="px-4 py-2 text-slate-300 font-medium hover:text-white transition"
+                      className="px-4 py-2 text-slate-300 font-medium hover:text-white transition cursor-pointer"
                     >
                       Login
                     </motion.button>
@@ -98,7 +98,7 @@ export const Navbar: React.FC = () => {
                     <motion.button
                       whileHover={{ scale: 1.05, y: -2 }}
                       whileTap={{ scale: 0.95 }}
-                      className="px-5 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition shadow-lg shadow-indigo-500/20"
+                      className="px-5 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition shadow-lg shadow-indigo-500/20 cursor-pointer"
                     >
                       Register
                     </motion.button>
@@ -111,7 +111,7 @@ export const Navbar: React.FC = () => {
                     whileHover={{ scale: 1.12 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => notify("No new notifications")}
-                    className="relative p-2.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-900"
+                    className="relative p-2.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-900 cursor-pointer"
                   >
                     <Bell size={20} />
                     <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
@@ -123,7 +123,7 @@ export const Navbar: React.FC = () => {
                     <motion.button
                       whileHover={{ scale: 1.04 }}
                       onClick={() => setProfile(!profile)}
-                      className="flex items-center gap-2 p-1.5 rounded-full border border-slate-800 hover:border-indigo-500 transition"
+                      className="flex items-center gap-2 p-1.5 rounded-full border border-slate-800 hover:border-indigo-500 transition cursor-pointer"
                     >
                       <div className="relative">
                         {userImage ? (
@@ -172,7 +172,7 @@ export const Navbar: React.FC = () => {
                           <motion.button
                             whileHover={{ x: 5 }}
                             onClick={handleLogout}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-rose-500 hover:bg-rose-500/10 border-t border-slate-800"
+                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-rose-500 hover:bg-rose-500/10 border-t border-slate-800 cursor-pointer"
                           >
                             <LogOut size={17} />
                             Logout
@@ -189,7 +189,7 @@ export const Navbar: React.FC = () => {
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => setMobile(!mobile)}
-              className="md:hidden p-2.5 rounded-xl hover:bg-slate-900 text-slate-300"
+              className="md:hidden p-2.5 rounded-xl hover:bg-slate-900 text-slate-300 cursor-pointer"
             >
               {mobile ? <X size={25} /> : <Menu size={25} />}
             </motion.button>
@@ -213,13 +213,13 @@ export const Navbar: React.FC = () => {
               {!isLoggedIn ? (
                 <div className="flex gap-2 pt-4 mt-3 border-t border-slate-900">
                   <Link href="/login" className="flex-1" onClick={() => setMobile(false)}>
-                    <button className="w-full border border-slate-800 text-slate-300 py-2.5 rounded-xl font-semibold hover:border-indigo-500 transition">
+                    <button className="w-full border border-slate-800 text-slate-300 py-2.5 rounded-xl font-semibold hover:border-indigo-500 transition cursor-pointer">
                       Login
                     </button>
                   </Link>
 
                   <Link href="/register" className="flex-1" onClick={() => setMobile(false)}>
-                    <button className="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-semibold">
+                    <button className="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-semibold cursor-pointer">
                       Register
                     </button>
                   </Link>
@@ -233,7 +233,7 @@ export const Navbar: React.FC = () => {
                   <motion.button
                     whileHover={{ x: 5 }}
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 text-rose-500 font-semibold"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-rose-500 font-semibold cursor-pointer"
                   >
                     <LogOut size={18} />
                     Logout
