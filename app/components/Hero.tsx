@@ -1,11 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { Search, MapPin, Briefcase, TrendingUp, Users, Sparkles, Building2 } from "lucide-react";
+import { Search, MapPin, Briefcase, TrendingUp, Users, Sparkles } from "lucide-react";
 import { toast } from "react-toastify";
 
 export const Hero: React.FC = () => {
+  const router = useRouter();
   const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState("");
 
@@ -22,6 +24,7 @@ export const Hero: React.FC = () => {
       return;
     }
     toast.success(`Searching for: ${keyword || "All Jobs"} in ${location || "All Locations"}`);
+    router.push(`/job?query=${encodeURIComponent(keyword)}&location=${encodeURIComponent(location)}`);
   };
 
   const popularTags = ["Frontend Developer", "UI/UX Designer", "Marketing", "Remote Work", "Data Analyst"];
@@ -162,7 +165,7 @@ export const Hero: React.FC = () => {
                 whileHover={{ scale: 1.05, boxShadow: "0px 0px 25px rgba(99, 102, 241, 0.6)" }}
                 whileTap={{ scale: 0.95 }}
                 type="submit"
-                className="w-full sm:w-auto px-8 py-4 rounded-xl sm:rounded-full bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-semibold transition shrink-0 flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-8 py-4 rounded-xl sm:rounded-full bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-semibold transition shrink-0 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Search Jobs</span>
                 <TrendingUp size={18} />
@@ -181,11 +184,12 @@ export const Hero: React.FC = () => {
                 key={idx}
                 whileHover={{ scale: 1.08, y: -2 }}
                 whileTap={{ scale: 0.95 }}
+                type="button"
                 onClick={() => {
                   setKeyword(tag);
                   toast.info(`Filter applied: "${tag}"`);
                 }}
-                className="px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 hover:border-indigo-500/50 hover:bg-indigo-500/10 text-gray-300 hover:text-indigo-300 transition text-xs sm:text-sm font-medium backdrop-blur-sm"
+                className="px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 hover:border-indigo-500/50 hover:bg-indigo-500/10 text-gray-300 hover:text-indigo-300 transition text-xs sm:text-sm font-medium backdrop-blur-sm cursor-pointer"
               >
                 {tag}
               </motion.button>

@@ -55,13 +55,13 @@ export default function MyProfilePage() {
     bio: "Passionate Frontend Developer with 4+ years of experience in building modern web applications.",
   });
 
-  // Session ba user data theke initial state set kora
+  // Session ba user data theke initial state set kora (Safe checking)
   useEffect(() => {
     if (session?.user) {
       setFormData((prev) => ({
         ...prev,
-        fullName: session.user.name || "",
-        email: session.user.email || "",
+        fullName: session.user?.name || "",
+        email: session.user?.email || "",
       }));
     }
   }, [session]);
@@ -139,7 +139,7 @@ export default function MyProfilePage() {
             whileTap={{ scale: 0.98 }}
             onClick={handleSubmit}
             disabled={loading}
-            className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold px-6 py-3 rounded-2xl shadow-lg shadow-indigo-500/25 transition text-sm self-start md:self-auto disabled:opacity-50"
+            className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold px-6 py-3 rounded-2xl shadow-lg shadow-indigo-500/25 transition text-sm self-start md:self-auto disabled:opacity-50 cursor-pointer"
           >
             {isSaved ? <CheckCircle2 size={18} /> : <Save size={18} />}
             {loading ? "Saving..." : isSaved ? "Saved Successfully!" : "Save Changes"}
@@ -166,8 +166,9 @@ export default function MyProfilePage() {
                 </div>
               )}
               <button
+                type="button"
                 title="Change Avatar"
-                className="absolute -bottom-2 -right-2 p-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl border border-slate-700 shadow-lg transition"
+                className="absolute -bottom-2 -right-2 p-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl border border-slate-700 shadow-lg transition cursor-pointer"
               >
                 <Camera size={14} />
               </button>
@@ -207,7 +208,7 @@ export default function MyProfilePage() {
                   <p className="text-[10px] text-slate-500">Updated recently</p>
                 </div>
               </div>
-              <button className="text-slate-400 hover:text-rose-400 transition p-1">
+              <button type="button" className="text-slate-400 hover:text-rose-400 transition p-1 cursor-pointer">
                 <X size={16} />
               </button>
             </div>
@@ -364,7 +365,7 @@ export default function MyProfilePage() {
               <button
                 type="button"
                 onClick={() => setIsModalOpen(true)}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium text-xs transition flex items-center gap-1.5 shadow-md shadow-indigo-600/20"
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium text-xs transition flex items-center gap-1.5 shadow-md shadow-indigo-600/20 cursor-pointer"
               >
                 <Plus size={16} /> Add Skill
               </button>
@@ -384,7 +385,7 @@ export default function MyProfilePage() {
                   <button
                     type="button"
                     onClick={() => handleRemoveSkill(skill.name)}
-                    className="text-slate-400 hover:text-rose-400 transition ml-1"
+                    className="text-slate-400 hover:text-rose-400 transition ml-1 cursor-pointer"
                   >
                     <X size={14} />
                   </button>
@@ -412,7 +413,7 @@ export default function MyProfilePage() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+                  className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer"
                 >
                   <X size={18} />
                 </button>
@@ -452,13 +453,13 @@ export default function MyProfilePage() {
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition"
+                    className="px-4 py-2.5 rounded-xl text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/20 transition"
+                    className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/20 transition cursor-pointer"
                   >
                     Add to Profile
                   </button>

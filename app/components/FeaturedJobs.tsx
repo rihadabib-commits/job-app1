@@ -1,4 +1,5 @@
 "use client";
+
 import Link from "next/link";
 import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -26,6 +27,7 @@ import { toast } from "react-toastify";
 
 interface Job {
   _id: string;
+  id?: string;
   title: string;
   company: string;
   location: string;
@@ -108,7 +110,7 @@ function timeAgo(dateString?: string) {
   const diffMs = Date.now() - new Date(dateString).getTime();
   const minutes = Math.floor(diffMs / 60000);
   if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes} hours ago`;
+  if (minutes < 60) return `${minutes} minutes ago`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours} hours ago`;
   const days = Math.floor(hours / 24);
@@ -211,7 +213,7 @@ export const FeaturedJobs: React.FC = () => {
                     filteredJobs.length === 1 ? "Job" : "Jobs"
                   } Available`}
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black mt-3 tracking-tight flex items-center gap-3">
+            <h2 className="text-3xl sm:text-5xl font-black mt-3 tracking-tight flex flex-wrap items-center gap-3">
               <span>
                 Featured{" "}
                 <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
@@ -325,9 +327,6 @@ export const FeaturedJobs: React.FC = () => {
                     transition={{ duration: 0.3 }}
                     whileHover={{ y: -8 }}
                     key={job._id}
-                    onClick={() =>
-                      toast.info(`Opening details for ${job.title}`)
-                    }
                     className="group relative p-6 rounded-3xl bg-slate-900/80 border border-slate-800 backdrop-blur-xl hover:border-indigo-500/40 cursor-pointer transition-all duration-300 flex flex-col justify-between"
                   >
                     {/* Card Top */}
@@ -426,14 +425,15 @@ export const FeaturedJobs: React.FC = () => {
         {/* View All Button */}
         {!loading && !errorMsg && jobs.length > 0 && (
           <div className="text-center mt-12">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => toast.info("Redirecting to all jobs...")}
-              className="px-8 py-3.5 rounded-full bg-slate-900 border border-slate-700 hover:border-indigo-500 text-white font-semibold text-sm transition shadow-xl"
-            >
-              Explore All Available Jobs
-            </motion.button>
+            <Link href="/job">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="px-8 py-3.5 rounded-full bg-slate-900 border border-slate-700 hover:border-indigo-500 text-white font-semibold text-sm transition shadow-xl"
+              >
+                Explore All Available Jobs
+              </motion.button>
+            </Link>
           </div>
         )}
       </div>

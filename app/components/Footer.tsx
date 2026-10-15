@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Briefcase, Send, GithubIcon, TwitterIcon, LinkedinIcon, FacebookIcon, Heart } from "lucide-react";
+import { Briefcase, Send, Github, Twitter, Linkedin, Facebook } from "lucide-react";
 import { toast } from "react-toastify";
 
 export const Footer: React.FC = () => {
@@ -53,9 +53,9 @@ export const Footer: React.FC = () => {
           <div>
             <h4 className="text-white font-bold text-sm uppercase tracking-wider mb-4">For Candidates</h4>
             <ul className="space-y-2.5 text-sm font-medium">
-              <li><a href="#" className="hover:text-indigo-400 transition">Browse Jobs</a></li>
-              <li><a href="#" className="hover:text-indigo-400 transition">Browse Categories</a></li>
-              <li><a href="#" className="hover:text-indigo-400 transition">Saved Jobs</a></li>
+              <li><a href="/job" className="hover:text-indigo-400 transition">Browse Jobs</a></li>
+              <li><a href="/companies" className="hover:text-indigo-400 transition">Browse Categories</a></li>
+              <li><a href="/dashboard" className="hover:text-indigo-400 transition">Saved Jobs</a></li>
               <li><a href="#" className="hover:text-indigo-400 transition">Career Advice</a></li>
             </ul>
           </div>
@@ -64,8 +64,8 @@ export const Footer: React.FC = () => {
           <div>
             <h4 className="text-white font-bold text-sm uppercase tracking-wider mb-4">For Employers</h4>
             <ul className="space-y-2.5 text-sm font-medium">
-              <li><a href="#" className="hover:text-indigo-400 transition">Post a Job</a></li>
-              <li><a href="#" className="hover:text-indigo-400 transition">Browse Talent</a></li>
+              <li><a href="/register" className="hover:text-indigo-400 transition">Post a Job</a></li>
+              <li><a href="/companies" className="hover:text-indigo-400 transition">Browse Talent</a></li>
               <li><a href="#" className="hover:text-indigo-400 transition">Pricing Plans</a></li>
               <li><a href="#" className="hover:text-indigo-400 transition">Recruitment Solutions</a></li>
             </ul>
