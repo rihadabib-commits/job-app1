@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   LayoutDashboard,
   FileText,
@@ -22,12 +23,17 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
 
-  // চেক করছি ইউজার অ্যাডমিন নাকি এমপ্লয়ার রাউটে আছে
-  const isAdmin = pathname.includes("/dashboard/admin");
-  const isEmployer = pathname.includes("/dashboard/employer");
+  // NextAuth Session থেকে আসল রোল রিড করা
+  const rawRole = (session?.user as any)?.role || "candidate";
+  const userRole = String(rawRole).trim().toLowerCase();
 
-  // ক্যান্ডিডেট মেনু
+  // ডায়নামিক রোল চেকিং
+  const isAdmin = userRole === "admin";
+  const isEmployer = userRole === "employer" || userRole === "recruiter";
+
+  // ক্যান্ডিডেট / অ্যাপ্লিকেন্ট মেনু
   const candidateNav = [
     { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
     { name: "My Applications", href: "/dashboard/applications", icon: FileText },
@@ -36,20 +42,20 @@ export default function DashboardLayout({
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
 
-  // এমপ্লয়ার মেনু
+  // এমপ্লয়ার মেনু
   const employerNav = [
-    { name: "Overview", href: "/dashboard/employer", icon: LayoutDashboard },
-    { name: "Post a Job", href: "/dashboard/employer/post-job", icon: PlusCircle },
-    { name: "Posted Jobs", href: "/dashboard/employer/jobs", icon: Briefcase },
-    { name: "Applicants", href: "/dashboard/employer/applicants", icon: Users },
+    { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Post a Job", href: "/dashboard/post-job", icon: PlusCircle },
+    { name: "Posted Jobs", href: "/dashboard/jobs", icon: Briefcase },
+    { name: "Applicants", href: "/dashboard/applicants", icon: Users },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
 
   // অ্যাডমিন মেনু
   const adminNav = [
-    { name: "Overview", href: "/dashboard/admin", icon: LayoutDashboard },
-    { name: "Manage Users", href: "/dashboard/admin/users", icon: Users },
-    { name: "Manage Jobs", href: "/dashboard/admin/jobs", icon: Briefcase },
+    { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Manage Users", href: "/dashboard/users", icon: Users },
+    { name: "Manage Jobs", href: "/dashboard/jobs", icon: Briefcase },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
 
@@ -62,6 +68,7 @@ export default function DashboardLayout({
 
   // ডাইনামিক স্টাইল এবং ব্যাজ লেবেল
   const roleLabel = isAdmin ? "Admin" : isEmployer ? "Employer" : "Candidate";
+  
   const badgeColor = isAdmin
     ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
     : isEmployer
