@@ -1,25 +1,71 @@
-import NextAuth from "next-auth";
+import NextAuth, { type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
 import clientPromise from "@/lib/dbConnect";
 
-export const authOptions = {
+export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     }),
+
+    // Email + Password login
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) return null;
+
+        const client = await clientPromise;
+        const db = client.db("jobportal");
+
+        const user = await db
+          .collection("users")
+          .findOne({ email: credentials.email });
+
+        // user না থাকলে, বা Google দিয়ে খোলা account (password নেই) হলে
+        if (!user || !user.password) return null;
+
+        const isValid = await bcrypt.compare(credentials.password, user.password);
+        if (!isValid) return null;
+
+        return {
+          id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          image: user.image || null,
+          role: user.role,
+        } as any;
+      },
+    }),
   ],
+
+  session: { strategy: "jwt" },
+
+  pages: {
+    signIn: "/login",
+    error: "/login",
+  },
+
   callbacks: {
-    async signIn({ user }: { user: any }) {
+    async signIn({ user, account }: { user: any; account: any }) {
+      // শুধু Google login এর সময় database এ user save করো
+      if (account?.provider !== "google") return true;
+
       try {
         const client = await clientPromise;
         const db = client.db("jobportal");
 
-        // চেক করা যাক ইউজার ডাটাবেজে আগে থেকেই আছে কি না
-        const existingUser = await db.collection("users").findOne({ email: user.email });
+        const existingUser = await db
+          .collection("users")
+          .findOne({ email: user.email });
 
         if (!existingUser) {
-          // না থাকলে নতুন ইউজার হিসেবে সেভ করো (ডিফল্ট রোল 'applicant')
           await db.collection("users").insertOne({
             name: user.name,
             email: user.email,
@@ -34,7 +80,36 @@ export const authOptions = {
         return false;
       }
     },
+
+    // token এ id আর role রাখা (dashboard এর জন্য দরকার)
+    async jwt({ token, user, account }: { token: any; user?: any; account?: any }) {
+      if (user) {
+        if (account?.provider === "google") {
+          const client = await clientPromise;
+          const db = client.db("jobportal");
+          const dbUser = await db
+            .collection("users")
+            .findOne({ email: user.email });
+          token.id = dbUser?._id.toString();
+          token.role = dbUser?.role || "applicant";
+        } else {
+          token.id = user.id;
+          token.role = user.role;
+        }
+      }
+      return token;
+    },
+
+    // session এ id আর role পাঠানো (navbar আর dashboard এ পাওয়া যাবে)
+    async session({ session, token }: { session: any; token: any }) {
+      if (session.user) {
+        session.user.id = token.id;
+        session.user.role = token.role;
+      }
+      return session;
+    },
   },
+
   secret: process.env.NEXTAUTH_SECRET,
 };
 
