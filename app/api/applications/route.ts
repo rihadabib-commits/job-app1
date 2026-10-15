@@ -1,102 +1,25 @@
-// import { NextResponse } from "next/server";
-// import clientPromise from "@/lib/dbConnect";
-// import { ObjectId } from "mongodb";
-
-// // GET: সব অ্যাপ্লিকেশন ডাটা এবং তাদের সম্পর্কিত Job Details ফেচ করা
-// export async function GET(req: Request) {
-//   try {
-//     const client = await clientPromise;
-//     const db = client.db("jobportal");
-
-//     // Aggregation pipeline to join applications with jobs collection
-//     const applications = await db
-//       .collection("applications")
-//       .aggregate([
-//         {
-//           $addFields: {
-//             // Convert string jobId to ObjectId if needed
-//             jobObjectId: {
-//               $cond: {
-//                 if: { $regexMatch: { input: "$jobId", regex: /^[0-9a-fA-F]{24}$/ } },
-//                 then: { $toObjectId: "$jobId" },
-//                 else: "$jobId"
-//               }
-//             }
-//           }
-//         },
-//         {
-//           $lookup: {
-//             from: "jobs",
-//             localField: "jobObjectId",
-//             foreignField: "_id",
-//             as: "jobDetails"
-//           }
-//         },
-//         {
-//           $unwind: {
-//             path: "$jobDetails",
-//             preserveNullAndEmptyArrays: true
-//           }
-//         },
-//         { $sort: { createdAt: -1 } }
-//       ])
-//       .toArray();
-
-//     return NextResponse.json(
-//       { success: true, data: applications },
-//       { status: 200 }
-//     );
-//   } catch (error: any) {
-//     console.error("Fetch Applications Error:", error);
-//     return NextResponse.json(
-//       { success: false, error: error.message || "Failed to fetch applications" },
-//       { status: 500 }
-//     );
-//   }
-// }
-
-// // POST: নতুন অ্যাপ্লিকেশন সাবমিট করা
-// export async function POST(req: Request) {
-//   try {
-//     const body = await req.json();
-//     const client = await clientPromise;
-//     const db = client.db("jobportal");
-
-//     const result = await db.collection("applications").insertOne({
-//       ...body,
-//       createdAt: new Date(),
-//     });
-
-//     return NextResponse.json(
-//       { success: true, message: "Application submitted successfully", data: result },
-//       { status: 201 }
-//     );
-//   } catch (error: any) {
-//     console.error("Application Submit Error:", error);
-//     return NextResponse.json(
-//       { success: false, error: error.message || "Failed to submit application" },
-//       { status: 500 }
-//     );
-//   }
-// }
-
-
-
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/dbConnect";
 import { ObjectId } from "mongodb";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
-// GET: সব অ্যাপ্লিকেশন ডাটা এবং তাদের সম্পর্কিত Job Details ফেচ করা
+// GET: নির্দিষ্ট ইউজারের অ্যাপ্লিকেশন ডাটা এবং Job Details ফেচ করা
 export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const email = searchParams.get("email");
+
     const client = await clientPromise;
     const db = client.db("jobportal");
+
+    // 🎯 মূল ফিক্স: ইমেইল না থাকলে খালি অ্যারে রিটার্ন করবে (ক্রস-কন্ট্যামিনেশন রোধে)
+    const query = email ? { email: email } : {};
 
     const applications = await db
       .collection("applications")
       .aggregate([
+        { $match: query }, // নির্দিষ্ট ইমেইলের ওপর ভিত্তি করে ফিল্টার
         {
           $addFields: {
             jobObjectId: {
@@ -157,7 +80,6 @@ export async function POST(req: Request) {
 
     let resumeLink = resumeLinkInput || "";
 
-    // ফাইল বা সিভি থাকলে সেভ করার প্রসেস
     if (file && typeof file === "object" && "name" in file && file.size > 0) {
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
@@ -166,7 +88,6 @@ export async function POST(req: Request) {
       const uploadDir = path.join(process.cwd(), "public/uploads");
 
       try {
-        // ফোল্ডার না থাকলে অটোমেটিক তৈরি করে নেবে
         await mkdir(uploadDir, { recursive: true });
         await writeFile(path.join(uploadDir, filename), buffer);
         resumeLink = `/uploads/${filename}`;
@@ -180,7 +101,7 @@ export async function POST(req: Request) {
 
     const result = await db.collection("applications").insertOne({
       fullName,
-      email,
+      email, // সাবমিট করার সময় ইউজারের ইমেইল সংরক্ষণ করা হচ্ছে
       phone,
       jobId,
       resumeLink,

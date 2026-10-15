@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/dbConnect";
 
-// GET: সব সেভ করা জব ফেচ করা
+// GET: নির্দিষ্ট ইউজারের সেভ করা জব ফেচ করা
 export async function GET(req: Request) {
   try {
+    const { searchParams } = new URL(req.url);
+    const email = searchParams.get("email");
+
     const client = await clientPromise;
     const db = client.db("jobportal");
 
+    // 🎯 ইমیل ফিল্টার প্রয়োগ করা যাতে অন্য অ্যাকাউন্টের সেভড জব না আসে
+    const query = email ? { userEmail: email } : {};
+
     const savedJobs = await db
       .collection("savedJobs")
-      .find({})
+      .find(query)
       .sort({ createdAt: -1 })
       .toArray();
 
