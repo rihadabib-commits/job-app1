@@ -182,7 +182,7 @@ export default function DashboardLayout({
   // ক্যান্ডিডেট / অ্যাপ্লিকেন্ট মেনু
   const candidateNav = [
     { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
-    { name: "My Applications", href: "/dashboard/application", icon: FileText },
+    { name: "My Applications", href: "/dashboard/applications", icon: FileText },
     { name: "Saved Jobs", href: "/dashboard/saved", icon: Bookmark },
     { name: "My Profile", href: "/dashboard/profile", icon: User },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
