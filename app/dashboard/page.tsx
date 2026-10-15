@@ -5,34 +5,60 @@ import { useSession } from "next-auth/react";
 import { Briefcase, CheckCircle2, Clock, Bookmark, XCircle } from "lucide-react";
 
 export default function OverviewPage() {
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const userName = session?.user?.name || "User";
+  const userEmail = session?.user?.email;
 
   const [applications, setApplications] = useState<any[]>([]);
+  const [savedCount, setSavedCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUserApplications = async () => {
+    if (sessionStatus === "loading") return;
+
+    if (sessionStatus === "unauthenticated" || !userEmail) {
+      setApplications([]);
+      setSavedCount(0);
+      setLoading(false);
+      return;
+    }
+
+    const fetchOverviewData = async () => {
+      setLoading(true);
+      // আগের ইউজারের ডেটা মুছে ফেলা
+      setApplications([]);
+      setSavedCount(0);
+
       try {
-        const res = await fetch("/api/applications");
-        const data = await res.json();
-        if (data.success) {
-          setApplications(data.data || []);
+        const [appsRes, savedRes] = await Promise.all([
+          fetch("/api/applications", { cache: "no-store" }),
+          fetch("/api/saved-jobs", { cache: "no-store" }),
+        ]);
+
+        const appsData = await appsRes.json();
+        const savedData = await savedRes.json();
+
+        if (appsData.success) {
+          setApplications(appsData.data || []);
+        }
+        if (savedData.success) {
+          setSavedCount((savedData.data || []).length);
         }
       } catch (err) {
-        console.error("Failed to load applications", err);
+        console.error("Failed to load overview data", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUserApplications();
-  }, []);
+    fetchOverviewData();
+  }, [sessionStatus, userEmail]);
 
   const totalApplied = applications.length;
-  // ডাইনামিক্যালি শর্টলিস্ট এবং ইন রিভিউ কাউন্ট করা
   const totalShortlisted = applications.filter((app) => app.status === "Shortlisted").length;
-  const totalInReview = applications.filter((app) => !app.status || app.status === "In Review").length;
+  const totalInReview = applications.filter(
+    (app) => !app.status || app.status === "In Review"
+  ).length;
 
   return (
     <div className="space-y-8">
@@ -64,7 +90,7 @@ export default function OverviewPage() {
         <StatCard
           icon={<Bookmark className="text-blue-400" size={22} />}
           title="Saved Jobs"
-          value="0"
+          value={savedCount.toString()}
         />
       </div>
 
@@ -138,7 +164,6 @@ const StatCard = ({
   </div>
 );
 
-// ডাইনামিক স্ট্যাটাস ব্যাজ কম্পোনেন্ট
 const DynamicStatusBadge = ({ status }: { status: string }) => {
   switch (status) {
     case "Shortlisted":

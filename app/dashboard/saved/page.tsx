@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { Search, Building2, MapPin, DollarSign, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
@@ -18,40 +19,49 @@ interface SavedJobItem {
 
 export default function SavedJobsPage() {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
+  const userEmail = session?.user?.email;
+
   const [searchTerm, setSearchTerm] = useState("");
   const [savedJobs, setSavedJobs] = useState<SavedJobItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ডাটাবেজ থেকে সেভ করা জবগুলো ফেচ করা
-  const fetchSavedJobs = async () => {
-    try {
-      const res = await fetch("/api/saved-jobs");
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setSavedJobs(data.data || []);
-      } else {
-        toast.error("Failed to load saved jobs");
-      }
-    } catch (err) {
-      console.error("Fetch saved jobs error:", err);
-      toast.error("Something went wrong!");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchSavedJobs();
-  }, []);
+    if (sessionStatus === "loading") return;
 
-  // সেভ করা জব রিমুভ করা
+    if (sessionStatus === "unauthenticated" || !userEmail) {
+      setSavedJobs([]);
+      setLoading(false);
+      return;
+    }
+
+    const fetchSavedJobs = async () => {
+      setLoading(true);
+      setSavedJobs([]); // আগের ইউজারের ডেটা মুছে ফেলা
+      try {
+        const res = await fetch("/api/saved-jobs", { cache: "no-store" });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setSavedJobs(data.data || []);
+        } else {
+          toast.error(data.error || "Failed to load saved jobs");
+        }
+      } catch (err) {
+        console.error("Fetch saved jobs error:", err);
+        toast.error("Something went wrong!");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSavedJobs();
+  }, [sessionStatus, userEmail]);
+
   const handleRemoveSaved = async (id: string) => {
     try {
-      const res = await fetch(`/api/saved-jobs/${id}`, {
-        method: "DELETE",
-      });
-
+      const res = await fetch(`/api/saved-jobs/${id}`, { method: "DELETE" });
       const data = await res.json();
+
       if (res.ok && data.success) {
         toast.success("Job removed from saved list");
         setSavedJobs((prev) => prev.filter((job) => job._id !== id));
@@ -84,7 +94,8 @@ export default function SavedJobsPage() {
           </p>
         </div>
         <div className="text-xs bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-slate-300 self-start sm:self-auto">
-          Saved Items: <span className="text-indigo-400 font-bold">{savedJobs.length}</span>
+          Saved Items:{" "}
+          <span className="text-indigo-400 font-bold">{savedJobs.length}</span>
         </div>
       </div>
 
@@ -107,7 +118,11 @@ export default function SavedJobsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredJobs.map((job) => {
             const dateStr = job.createdAt
-              ? new Date(job.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+              ? new Date(job.createdAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
               : "Recently";
 
             return (
@@ -144,7 +159,7 @@ export default function SavedJobsPage() {
                   </div>
                 </div>
 
-                {/* Actions: Apply Now & Remove */}
+                {/* Actions */}
                 <div className="flex items-center gap-3 mt-6 pt-4 border-t border-slate-800/80">
                   <button
                     onClick={() => router.push(`/jobs/${job.jobId || job._id}/apply`)}

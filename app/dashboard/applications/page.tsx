@@ -1,38 +1,52 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, Filter, ExternalLink, Trash2, Building, Calendar, Tag } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { Search, Filter, Trash2, Building, Calendar, Tag } from "lucide-react";
 import { toast } from "react-toastify";
 
 export default function MyApplicationsPage() {
+  const { data: session, status: sessionStatus } = useSession();
+  const userEmail = session?.user?.email;
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ব্যাকএন্ড API থেকে অ্যাপ্লিকেশন ডেটা ফেচ করা
-  const fetchApplications = async () => {
-    try {
-      const res = await fetch("/api/applications");
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setApplications(data.data || []);
-      } else {
-        toast.error("Failed to load applications");
-      }
-    } catch (err) {
-      console.error("Fetch error:", err);
-      toast.error("Something went wrong!");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchApplications();
-  }, []);
+    // লগইন চেক শেষ না হওয়া পর্যন্ত অপেক্ষা
+    if (sessionStatus === "loading") return;
 
-  // Status Styling Badge (Shortlisted, In Review, Rejected ইত্যাদি হ্যান্ডেল করা)
+    // লগইন না থাকলে খালি দেখাবে
+    if (sessionStatus === "unauthenticated" || !userEmail) {
+      setApplications([]);
+      setLoading(false);
+      return;
+    }
+
+    const fetchApplications = async () => {
+      setLoading(true);
+      setApplications([]); // আগের ইউজারের ডেটা মুছে ফেলা
+      try {
+        const res = await fetch("/api/applications", { cache: "no-store" });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setApplications(data.data || []);
+        } else {
+          toast.error(data.error || "Failed to load applications");
+        }
+      } catch (err) {
+        console.error("Fetch error:", err);
+        toast.error("Something went wrong!");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchApplications();
+  }, [sessionStatus, userEmail]);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Shortlisted":
@@ -48,7 +62,6 @@ export default function MyApplicationsPage() {
     }
   };
 
-  // Filter Logic
   const filteredApplications = applications.filter((app) => {
     const jobTitle = app.jobDetails?.title || app.jobTitle || "";
     const company = app.jobDetails?.company || app.company || "";
@@ -57,31 +70,27 @@ export default function MyApplicationsPage() {
     const matchesSearch =
       jobTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
       company.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesStatus = statusFilter === "All" || status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  // Application Delete / Withdraw Handle
   const handleWithdraw = async (id: string) => {
-    if (confirm("Are you sure you want to withdraw this application?")) {
-      try {
-        const res = await fetch(`/api/applications/${id}`, {
-          method: "DELETE",
-        });
+    if (!confirm("Are you sure you want to withdraw this application?")) return;
 
-        const data = await res.json();
+    try {
+      const res = await fetch(`/api/applications/${id}`, { method: "DELETE" });
+      const data = await res.json();
 
-        if (res.ok && data.success) {
-          toast.success("Application withdrawn successfully");
-          setApplications(applications.filter((app) => app._id !== id));
-        } else {
-          toast.error(data.error || "Failed to withdraw application");
-        }
-      } catch (err) {
-        console.error("Delete error:", err);
-        toast.error("Something went wrong!");
+      if (res.ok && data.success) {
+        toast.success("Application withdrawn successfully");
+        setApplications((prev) => prev.filter((app) => app._id !== id));
+      } else {
+        toast.error(data.error || "Failed to withdraw application");
       }
+    } catch (err) {
+      console.error("Delete error:", err);
+      toast.error("Something went wrong!");
     }
   };
 
@@ -96,7 +105,8 @@ export default function MyApplicationsPage() {
           </p>
         </div>
         <div className="text-xs bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-slate-300 self-start sm:self-auto">
-          Total Applied: <span className="text-indigo-400 font-bold">{applications.length}</span>
+          Total Applied:{" "}
+          <span className="text-indigo-400 font-bold">{applications.length}</span>
         </div>
       </div>
 
@@ -131,10 +141,12 @@ export default function MyApplicationsPage() {
         </div>
       </div>
 
-      {/* Applications Table / Card List */}
+      {/* Applications Table */}
       <div className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden">
         {loading ? (
-          <div className="text-center py-16 text-slate-400 text-sm">Loading your applications...</div>
+          <div className="text-center py-16 text-slate-400 text-sm">
+            Loading your applications...
+          </div>
         ) : filteredApplications.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -154,7 +166,7 @@ export default function MyApplicationsPage() {
                   const location = app.jobDetails?.location || "Remote / Bangladesh";
                   const jobType = app.jobDetails?.jobType || "Full-time";
                   const currentStatus = app.status || "In Review";
-                  
+
                   const dateStr = app.createdAt
                     ? new Date(app.createdAt).toLocaleDateString("en-US", {
                         month: "short",

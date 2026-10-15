@@ -1,21 +1,24 @@
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/dbConnect";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
-// GET: নির্দিষ্ট ইউজারের সেভ করা জব ফেচ করা
-export async function GET(req: Request) {
+export const dynamic = "force-dynamic";
+
+// GET: শুধু নিজের সেভ করা জব
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const email = searchParams.get("email");
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
 
     const client = await clientPromise;
     const db = client.db("jobportal");
 
-    // 🎯 ইমیل ফিল্টার প্রয়োগ করা যাতে অন্য অ্যাকাউন্টের সেভড জব না আসে
-    const query = email ? { userEmail: email } : {};
-
     const savedJobs = await db
       .collection("savedJobs")
-      .find(query)
+      .find({ userEmail: session.user.email })
       .sort({ createdAt: -1 })
       .toArray();
 
@@ -29,15 +32,34 @@ export async function GET(req: Request) {
   }
 }
 
-// POST: নতুন জব সেভ বা বুকমার্ক করার জন্য
+// POST: জব সেভ করা
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
     const client = await clientPromise;
     const db = client.db("jobportal");
 
+    if (body.jobId) {
+      const exists = await db.collection("savedJobs").findOne({
+        userEmail: session.user.email,
+        jobId: body.jobId,
+      });
+      if (exists) {
+        return NextResponse.json(
+          { success: false, error: "Job already saved" },
+          { status: 409 }
+        );
+      }
+    }
+
     const result = await db.collection("savedJobs").insertOne({
       ...body,
+      userEmail: session.user.email,
       createdAt: new Date(),
     });
 
