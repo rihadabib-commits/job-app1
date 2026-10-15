@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, type Variants } from "framer-motion";
 import { Search, MapPin, Briefcase, TrendingUp, Users, Sparkles } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -29,8 +29,8 @@ export const Hero: React.FC = () => {
 
   const popularTags = ["Frontend Developer", "UI/UX Designer", "Marketing", "Remote Work", "Data Analyst"];
 
-  // Animation Variants
-  const containerVariants = {
+  // Animation Variants (typed with Variants to fix TS2322)
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -38,9 +38,16 @@ export const Hero: React.FC = () => {
     },
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { y: 40, opacity: 0 },
-    visible: { y: 0, opacity: 1, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.7,
+        ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
+      },
+    },
   };
 
   return (
